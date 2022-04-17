@@ -1,14 +1,21 @@
-# Option-1 : Createting docker image using command module 
+# Option-1 : Createting docker image using command module
 ---
-- hosts: all
+- hosts: ansible
   become: true
-  tasks:
-  - name: building docker image
-    command: docker build -t simple-devops-image .
-    args:
-      chdir: /opt/docker
 
-# option-2 : creating docker image using docker_image module 
+  tasks:
+    - name: create docker image
+      command: docker build -t regapp:latest .
+      args:
+        chdir: /opt/docker
+
+    - name: create tag to push image onto dockerhub
+      command: docker tag regapp:latest krisvu/regapp:latest
+
+    - name: push docker image
+      command: docker push krisvu/regapp:latest
+      
+# option-2 : creating docker image using docker_image module
 
 #  tasks:
 #  - name: building docker image

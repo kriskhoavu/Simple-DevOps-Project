@@ -10,33 +10,52 @@
    ```sh 
    # Pull tomcat latest image from dockerhub 
    From tomcat
-   # Maintainer
-   MAINTAINER "AR Shankar" 
+
+   # To be resolved issue with latest tomcat
+   RUN cp -R /usr/local/tomcat/webapps.dist/* /usr/local/tomcat/webapps
 
    # copy war file on to container 
    COPY ./webapp.war /usr/local/tomcat/webapps
 1. Create `create-docker-image.yml` unser *`/opt/docker`* on Ansible server **[Get Help Here]()**
    ```sh
    ---
-   - hosts: all
+   - hosts: ansible
      #ansadmin doesn't need root access to create an image
      become: true 
 
      tasks:
-     - name: building docker image
-       command: "docker build -t simple-devops-image ." 
-       args:
-         chdir: /opt/docker
+       - name: create docker image
+         command: docker build -t regapp:latest .
+         args:
+           chdir: /opt/docker
+
+       - name: create tag to push image onto dockerhub
+         command: docker tag regapp:latest krisvu/regapp:latest
+
+       - name : push docker image
+         command: docker push krisvu/regapp:latest
    ```
-1. Create `create-docker-image.yml` under *`/opt/docker`* on Ansible server **[Get Help Here]()**
+1. Create `create-docker-container.yml` under *`/opt/docker`* on Ansible server **[Get Help Here]()**
    ```ssh
    ---
-   - hosts: all
+   - hosts: docker
      become: ture
 
      tasks:
-     - name: creating docker image using docker command
-       command: docker run -d --name simple-devops-container -p 8080:8080 simple-devops-image
+       - name: stop existing container
+         command: docker stop regapp-server
+         ignore_errors: yes
+
+       - name: remove the container
+         command: docker rm regapp-server
+         ignore_errors: yes
+
+       - name: remove image
+         command: docker rmi krisvu/regapp:latest   
+         ignore_errors: yes
+
+       - name: create container
+         command: docker run -d --name regapp-server -p 8080:8080 krisvu/regapp:latest
    ```
 
 ### Integration between Ansible-control-node and Jenkins
@@ -81,6 +100,8 @@ Enable connection between Ansible-control-node and Jenkins
 	       - Exec command: 
                 ```sh 
                 ansible-playbook -i /opt/docker/hosts /opt/docker/create-docker-image.yml;
+                sleep 10;
+                ansible-playbook -i /opt/docker/hosts /opt/docker/create-docker-container.yml;
                 ```
 
 Save and run the job now.
